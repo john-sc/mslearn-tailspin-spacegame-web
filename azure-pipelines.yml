@@ -1,10 +1,20 @@
+# ASP.NET Core
+# Build and test ASP.NET Core projects targeting .NET Core.
+# Add steps that run tests, create a NuGet package, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
+
 trigger:
-- '*'
+  branches:
+    include:
+    - '*'
+  paths:
+    exclude:
+      - docs/* # changes to this folder will not trigger a build
 
 pool:
   vmImage: 'ubuntu-20.04'
   demands:
-  - npm
+    - npm
 
 variables:
   buildConfiguration: 'Release'
@@ -23,13 +33,14 @@ steps:
     verbose: false
 
 - script: './node_modules/.bin/node-sass $(wwwrootDir) --output $(wwwrootDir)'
-  displayName: 'Compile Sass assets'
+  displayName: 'Sass compile'
 
 - task: gulp@1
-  displayName: 'Run gulp tasks'
+  displayName: 'Run gulp'
 
 - script: 'echo "$(Build.DefinitionName), $(Build.BuildId), $(Build.BuildNumber)" > buildinfo.txt'
   displayName: 'Write build info'
+#  workingDirectory: Tailspin.SpaceGame.Web/wwwroot
   workingDirectory: $(wwwrootDir)
 
 - task: DotNetCoreCLI@2
@@ -54,6 +65,14 @@ steps:
     arguments: '--no-build --configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)/$(buildConfiguration)'
     zipAfterPublish: true
 
+- template: templates/build.yml
+  parameters:
+    buildConfiguration: 'Release'
+
+- template: templates/build.yml
+  parameters:
+    buildConfiguration: 'Debug'        
+
 - task: PublishBuildArtifacts@1
-  displayName: 'Publish Artifact: drop'
+  displayName: 'Publish artifacts - drop'    
   condition: succeeded()
